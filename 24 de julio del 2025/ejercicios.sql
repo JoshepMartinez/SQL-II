@@ -180,3 +180,182 @@ where f.id in (
     select p.id_fabricante
     from producto p
 );
+
+-- 1. Devuelve un listado que solamente muestre los clientes que no han realizado ningún pedido.
+
+SELECT * 
+FROM cliente 
+WHERE id NOT IN (SELECT id_cliente FROM pedido);
+
+-- 2. Devuelve un listado que solamente muestre los comerciales que no han realizado ningún pedido.
+
+SELECT * 
+FROM comercial 
+WHERE id NOT IN (SELECT id_comercial FROM pedido);
+
+-- 3. Devuelve un listado con los clientes que no han realizado ningún pedido y de los comerciales que
+-- no han participado en ningún pedido. Ordene el listado alfabéticamente por los apellidos y el
+-- nombre. En en listado deberá diferenciar de algún modo los clientes y los comerciales.
+
+SELECT 'Cliente' AS tipo, nombre, apellido1, apellido2
+FROM cliente 
+WHERE id NOT IN (SELECT id_cliente FROM pedido)
+UNION
+SELECT 'Comercial' AS tipo, nombre, apellido1, apellido2
+FROM comercial 
+WHERE id NOT IN (SELECT id_comercial FROM pedido)
+ORDER BY apellido1, apellido2, nombre;
+
+-- 4. ¿Se podrían realizar las consultas anteriores con NATURAL LEFT JOIN o NATURAL RIGHT JOIN? Justifique
+-- su respuesta.
+
+-- Respuesta no se pondria realizar porque para utilizar el natural left join se necesita que en ambas tablas tengan el mismo nombre
+-- o que tengan una relacion entre ellas por eso en los ejercicios anteriores no se podria usar el natural left join porque no cumple con 
+-- las condiciones requeridas para usar el natural lef join las cuales son que deben que tener al menos una columna con el mismo nombre 
+-- y tipo de datos compatible.
+
+-- 5. Calcula cuál es el máximo valor de los pedidos realizados durante el mismo día para cada uno de
+-- los clientes. Es decir, el mismo cliente puede haber realizado varios pedidos de diferentes
+-- cantidades el mismo día. Se pide que se calcule cuál es el pedido de máximo valor para cada uno
+-- de los días en los que un cliente ha realizado un pedido. Muestra el identificador del cliente,
+-- nombre, apellidos, la fecha y el valor de la cantidad.
+
+SELECT p.id_cliente, c.nombre, c.apellido1, c.apellido2, p.fecha, MAX(p.total) AS max_total
+FROM pedido p
+JOIN cliente c ON p.id_cliente = c.id
+GROUP BY p.id_cliente, p.fecha;
+
+-- 6. Calcula cuál es el máximo valor de los pedidos realizados durante el mismo día para cada uno de
+-- los clientes, teniendo en cuenta que sólo queremos mostrar aquellos pedidos que superen la
+-- cantidad de 2000 €.
+
+SELECT p.id_cliente, c.nombre, c.apellido1, c.apellido2, p.fecha, MAX(p.total) AS max_total
+FROM pedido p
+JOIN cliente c ON p.id_cliente = c.id
+WHERE p.total > 2000
+GROUP BY p.id_cliente, p.fecha;
+
+-- 7. Calcula el máximo valor de los pedidos realizados para cada uno de los comerciales durante la
+-- fecha 2016-08-17. Muestra el identificador del comercial, nombre, apellidos y total.
+
+SELECT p.id_comercial, cm.nombre, cm.apellido1, cm.apellido2, MAX(p.total) AS max_total
+FROM pedido p
+JOIN comercial cm ON p.id_comercial = cm.id
+WHERE p.fecha = '2016-08-17'
+GROUP BY p.id_comercial;
+
+-- 8. Devuelve un listado con el identificador de cliente, nombre y apellidos y el número total de
+-- pedidos que ha realizado cada uno de clientes. Tenga en cuenta que pueden existir clientes que
+-- no han realizado ningún pedido. Estos clientes también deben aparecer en el listado indicando
+-- que el número de pedidos realizados es 0.
+
+SELECT c.id, c.nombre, c.apellido1, c.apellido2, COUNT(p.id) AS total_pedidos
+FROM cliente c
+LEFT JOIN pedido p ON c.id = p.id_cliente
+GROUP BY c.id;
+
+-- 9. Devuelve un listado con el identificador de cliente, nombre y apellidos y el número total de
+-- pedidos que ha realizado cada uno de clientes durante el año 2017.
+
+SELECT c.id, c.nombre, c.apellido1, c.apellido2, COUNT(p.id) AS total_2017
+FROM cliente c
+LEFT JOIN pedido p ON c.id = p.id_cliente AND YEAR(p.fecha) = 2017
+GROUP BY c.id;
+
+-- 10.Devuelve un listado que muestre el identificador de cliente, nombre, primer apellido y el valor de
+-- la máxima cantidad del pedido realizado por cada uno de los clientes. El resultado debe mostrar
+-- aquellos clientes que no han realizado ningún pedido indicando que la máxima cantidad de sus
+-- pedidos realizados es 0. Puede hacer uso de la función IFNULL.
+
+SELECT c.id, c.nombre, c.apellido1, IFNULL(MAX(p.total), 0) AS max_total
+FROM cliente c
+LEFT JOIN pedido p ON c.id = p.id_cliente
+GROUP BY c.id;
+
+-- 11.Devuelve cuál ha sido el pedido de máximo valor que se ha realizado cada año.
+
+SELECT YEAR(fecha) AS anio, MAX(total) AS max_total
+FROM pedido
+GROUP BY anio;
+
+-- 12.Devuelve el número total de pedidos que se han realizado cada año.
+
+SELECT YEAR(fecha) AS anio, COUNT(*) AS total_pedidos
+FROM pedido
+GROUP BY anio;
+
+-- 13.Devuelve los datos del cliente que realizó el pedido más caro en el año 2019. (Sin utilizar INNER
+-- JOIN)
+
+SELECT * 
+FROM cliente
+WHERE id = (
+    SELECT id_cliente 
+    FROM pedido 
+    WHERE YEAR(fecha) = 2019 
+    ORDER BY total DESC 
+    LIMIT 1
+);
+
+-- 14.Devuelve la fecha y la cantidad del pedido de menor valor realizado por el cliente Pepe Ruiz
+-- Santana.
+
+SELECT fecha, total 
+FROM pedido 
+WHERE id_cliente = (
+    SELECT id FROM cliente 
+    WHERE nombre = 'Pepe' AND apellido1 = 'Ruiz' AND apellido2 = 'Santana'
+)
+ORDER BY total ASC 
+LIMIT 1;
+
+-- 15.Devuelve un listado con los datos de los clientes y los pedidos, de todos los clientes que han
+-- realizado un pedido durante el año 2017 con un valor mayor o igual al valor medio de los pedidos
+-- realizados durante ese mismo año.
+
+SELECT c.*, p.*
+FROM cliente c
+JOIN pedido p ON c.id = p.id_cliente
+WHERE YEAR(p.fecha) = 2017
+AND p.total >= (
+    SELECT AVG(total) FROM pedido WHERE YEAR(fecha) = 2017
+);
+
+-- 16.Devuelve el pedido más caro que existe en la tabla pedido si hacer uso de MAX, ORDER BY ni LIMIT.
+
+SELECT * 
+FROM pedido p1
+WHERE total >= ALL (SELECT total FROM pedido);
+
+-- 17.Devuelve un listado de los clientes que no han realizado ningún pedido. (Utilizando ANY o ALL).
+
+SELECT * 
+FROM cliente 
+WHERE id <> ALL (SELECT id_cliente FROM pedido);
+
+-- 18.Devuelve un listado de los comerciales que no han realizado ningún pedido. (Utilizando ANY o ALL).
+
+SELECT * 
+FROM comercial 
+WHERE id <> ALL (SELECT id_comercial FROM pedido);
+
+-- 19.Devuelve un listado de los clientes que no han realizado ningún pedido. (Utilizando IN o NOT IN).
+
+SELECT * 
+FROM cliente 
+WHERE id NOT IN (SELECT id_cliente FROM pedido);
+
+-- 20.Devuelve un listado de los comerciales que no han realizado ningún pedido. (Utilizando IN o NOT
+-- IN).
+
+SELECT * 
+FROM comercial 
+WHERE id NOT IN (SELECT id_comercial FROM pedido);
+
+-- 21.Devuelve un listado de los clientes que no han realizado ningún pedido. (Utilizando EXISTS o NOT
+-- EXISTS).
+SELECT * 
+FROM cliente c
+WHERE NOT EXISTS (
+    SELECT 1 FROM pedido p WHERE p.id_cliente = c.id
+);
