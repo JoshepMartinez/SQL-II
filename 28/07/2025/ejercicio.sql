@@ -168,66 +168,76 @@ INSERT INTO Enfermo(Inscripcion, Apellido, Direccion, Fecha_Nac, S, NSS) VALUES
 
 drop procedure empleados_por_fecha_y_departamento;
 
-delimiter $$
-create procedure empleados_por_fecha_y_departamento(
-    in fecha_inicio date,
-    in fecha_fin date,
-    in id_departamento int
-)
-begin
-    select * 
-    from emp
-    where fecha_alt between fecha_inicio and fecha_fin
-      and dept_no = id_departamento;
-end $$
-delimiter ;
+DELIMITER $$
 
-call empleados_por_fecha_y_departamento('1980-01-01', '1983-12-31', 20);
+CREATE PROCEDURE empleados_por_fecha_y_departamento(
+    IN fecha_inicio DATE,
+    IN fecha_fin DATE,
+    IN id_departamento INT
+)
+BEGIN
+    SELECT * 
+    FROM Emp
+    WHERE Fecha_Alt BETWEEN fecha_inicio AND fecha_fin
+      AND Dept_No = id_departamento;
+END $$
+
+DELIMITER ;
+
+CALL empleados_por_fecha_y_departamento('1980-01-01', '1983-12-31', 20);
 
 
 -- 2. Construya el procedimiento que inserte un empleado. 
 
-drop procedure insertar_empleado;
+DROP PROCEDURE IF EXISTS insertar_empleado;
 
-delimiter $$
-create procedure insertar_empleado(
-    in p_emp_no int,
-    in p_apellido varchar(50),
-    in p_oficio varchar(50),
-    in p_dir int,
-    in p_fecha_alt date,
-    in p_salario decimal(10,2),
-    in p_comision decimal(10,2),
-    in p_dept_no int
+DELIMITER $$
+CREATE PROCEDURE insertar_empleado(
+    IN p_emp_no INT,
+    IN p_apellido VARCHAR(50),
+    IN p_oficio VARCHAR(50),
+    IN p_dir INT,
+    IN p_fecha_alt DATE,
+    IN p_salario DECIMAL(10,2),
+    IN p_comision DECIMAL(10,2),
+    IN p_dept_no INT
 )
-begin
-    insert into emp(emp_no, apellido, oficio, dir, fecha_alt, salario, comision, dept_no)
-    values(p_emp_no, p_apellido, p_oficio, p_dir, p_fecha_alt, p_salario, p_comision, p_dept_no);
-end $$
-delimiter ;
+BEGIN
+    INSERT INTO Emp(Emp_No, Apellido, Oficio, Dir, Fecha_Alt, Salario, Comision, Dept_No)
+    VALUES(p_emp_no, p_apellido, p_oficio, p_dir, p_fecha_alt, p_salario, p_comision, p_dept_no);
+END $$
+DELIMITER ;
 
-call insertar_empleado(8000, 'LOPEZ', 'PROGRAMADOR', 7839, '1985-06-10', 150000.00, 5000.00, 10);
-call insertar_empleado(8001, 'GOMEZ', 'ANALISTA', 7566, '1984-08-15', 220000.00, 10000.00, 20);
+CALL insertar_empleado(8000, 'LOPEZ', 'PROGRAMADOR', 7839, '1985-06-10', 150000.00, 5000.00, 10);
+CALL insertar_empleado(8001, 'GOMEZ', 'ANALISTA', 7566, '1984-08-15', 220000.00, 10000.00, 20);
+
 
 
 -- 3. Construya el procedimiento que recupere el nombre, número y número de personas a
 -- partir del número de departamento.
 
-drop procedure actualizar_salario;
 
-delimiter $$
-create procedure actualizar_salario(
-    in p_emp_no int,
-    in p_incremento decimal(10,2)
+DROP PROCEDURE IF EXISTS obtener_info_departamento;
+
+DELIMITER $$
+
+CREATE PROCEDURE obtener_info_departamento(
+    IN p_dept_no INT
 )
-begin
-    update emp
-    set salario = salario + p_incremento
-    where emp_no = p_emp_no;
-end $$
-delimiter ;
+BEGIN
+    SELECT 
+        d.DNombre AS Nombre_Departamento,
+        d.Dept_No AS Numero_Departamento,
+        COUNT(e.Emp_No) AS Numero_Empleados
+    FROM Dept d
+    LEFT JOIN Emp e ON d.Dept_No = e.Dept_No
+    WHERE d.Dept_No = p_dept_no
+    GROUP BY d.Dept_No, d.DNombre;
+END $$
 
-call actualizar_salario(8001, 50000.00);
+DELIMITER ;
+
+CALL obtener_info_departamento(20);
 
 
 -- 4. Diseñe y construya un procedimiento igual que el anterior, pero que recupere también las
@@ -260,38 +270,51 @@ CALL info_depto_y_empleados_por_nombre('VENTAS');
 
 -- 5. Construya un procedimiento para devolver salario, oficio y comisión, pasándole el apellido.
 
-delimiter $$
-create procedure empleados_mismo_oficio(
-    in p_emp_no int
-)
-begin
-    select * 
-    from emp
-    where oficio = (
-        select oficio 
-        from emp 
-        where emp_no = p_emp_no
-    );
-end $$
-delimiter ;
 
-call empleados_mismo_oficio(7499);
+DROP PROCEDURE IF EXISTS datos_empleado_por_apellido;
+
+DELIMITER $$
+
+CREATE PROCEDURE datos_empleado_por_apellido(
+    IN p_apellido VARCHAR(50)
+)
+BEGIN
+    SELECT Salario, Oficio, Comision
+    FROM Emp
+    WHERE Apellido = p_apellido;
+END $$
+
+DELIMITER ;
+
+CALL datos_empleado_por_apellido('ARROYO');
+
 
 
 -- 6. Tal como el ejercicio anterior, pero si no le pasamos ningún valor, mostrará los datos de
 -- todos los empleados.
 
-delimiter $$
-create procedure contar_empleados_por_oficio()
-begin
-    select oficio, count(*) as total_empleados
-    from emp
-    group by oficio
-    order by total_empleados desc;
-end $$
-delimiter ;
 
-call contar_empleados_por_oficio();
+DROP PROCEDURE IF EXISTS datos_empleado_condicional;
+
+DELIMITER $$
+
+CREATE PROCEDURE datos_empleado_condicional(
+    IN p_apellido VARCHAR(50)
+)
+BEGIN
+    IF p_apellido IS NULL OR p_apellido = '' THEN
+        SELECT Salario, Oficio, Comision, Apellido
+        FROM Emp;
+    ELSE
+        SELECT Salario, Oficio, Comision, Apellido
+        FROM Emp
+        WHERE Apellido = p_apellido;
+    END IF;
+END $$
+
+DELIMITER ;
+
+CALL datos_empleado_condicional('');
 
 
 -- 7. Construya un procedimiento para mostrar el salario, oficio, apellido y nombre del
@@ -317,4 +340,4 @@ BEGIN
 END $$
 DELIMITER ;
 
-CALL empleados_por_apellido('ez');
+CALL empleados_por_apellido('tin');
